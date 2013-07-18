@@ -12,13 +12,17 @@ angular.module('ui.sortable', [])
           link: function(scope, element, attrs, ngModel) {
 
               function combineCallbacks(first,second){
-                  if( second && (typeof second === "function") ){
-                      return function(e,ui){
-                          second(e,ui);
-                          first(e,ui);
-                      };
-                  }
-                  return first;
+                if(!second) { return first; }
+
+                if(typeof second === "function"){
+                  second = { post: second }
+                }
+
+                return function(e, ui) {
+                  if(second.pre) { second.pre(e,ui); }
+                  first(e, ui);
+                  if(second.post) { second.post(e, ui); }
+                }
               }
 
             var opts = {};

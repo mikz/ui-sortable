@@ -14,8 +14,8 @@ angular.module('ui.sortable', [])
               function combineCallbacks(first,second){
                   if( second && (typeof second === "function") ){
                       return function(e,ui){
-                          first(e,ui);
                           second(e,ui);
+                          first(e,ui);
                       };
                   }
                   return first;

@@ -11,35 +11,39 @@ angular.module('ui.sortable', [])
           require: '?ngModel',
           link: function(scope, element, attrs, ngModel) {
 
-              function combineCallbacks(first,second){
-                if(!second) { return first; }
 
-                if(typeof second === "function"){
-                  second = { post: second }
-                }
-
-                return function(e, ui) {
-                  if(second.pre) { second.pre(e,ui); }
-                  first(e, ui);
-                  if(second.post) { second.post(e, ui); }
-                }
-              }
-
+            var sortable;
             var opts = {};
 
             var callbacks = {
-                receive: null,
-                remove:null,
-                start:null,
-                stop:null,
-                update:null
+              receive: null,
+              remove:null,
+              start:null,
+              stop:null,
+              update:null
             };
-            
-            var apply = function(e, ui) {
-              if (ui.item.sortable.resort || ui.item.sortable.relocate) {
+
+            var apply = function(e, ui, sortable) {
+              if (ngModel || sortable.relocate) {
                 scope.$apply();
               }
             };
+
+            var combineCallbacks = function(first,second){
+              if(!second) { second = {}; }
+
+              if(typeof second === "function"){
+                second = { post: second };
+              }
+
+              return function(e, ui) {
+                var state = sortable;
+                if(second && second.pre) { second.pre(e,ui, state); }
+                first(e, ui, state);
+                if(second && second.post) { second.post(e, ui, state); }
+              };
+            };
+
 
             angular.extend(opts, uiSortableConfig);
 
@@ -51,42 +55,46 @@ angular.module('ui.sortable', [])
 
               callbacks.start = function(e, ui) {
                 // Save position of dragged item
-                ui.item.sortable = { index: ui.item.index() };
+                sortable = { index: ui.item.index() };
               };
 
-              callbacks.update = function(e, ui) {
+              callbacks.update = function(e, ui, state) {
                 // For some reason the reference to ngModel in stop() is wrong
-                ui.item.sortable.resort = ngModel;
+                // ui.item.sortable.resort = ngModel;
+                if (state) { state.updated = true; }
               };
 
-              callbacks.receive = function(e, ui) {
-                ui.item.sortable.relocate = true;
+              callbacks.receive = function(e, ui, state) {
+                if(!state) { state = {moved: ui.item.moved, index: ui.item.index() }; }
+
                 // added item to array into correct position and set up flag
-                ngModel.$modelValue.splice(ui.item.index(), 0, ui.item.sortable.moved);
+                ngModel.$modelValue.splice(state.index, 0, state.moved);
               };
 
-              callbacks.remove = function(e, ui) {
+              callbacks.remove = function(e, ui, state) {
                 // copy data into item
-                if (ngModel.$modelValue.length === 1) {
-                  ui.item.sortable.moved = ngModel.$modelValue.splice(0, 1)[0];
-                } else {
-                  ui.item.sortable.moved =  ngModel.$modelValue.splice(ui.item.sortable.index, 1)[0];
-                }
+                ui.item.moved =  ngModel.$modelValue.splice(state.index, 1)[0];
+                state.removed = true;
+                delete state.updated;
               };
 
-              callbacks.stop = function(e, ui) {
+              callbacks.stop = function(e, ui, state) {
+                // reset state
+                sortable = null;
+
                 // digest all prepared changes
-                if (ui.item.sortable.resort && !ui.item.sortable.relocate) {
+                if( state && state.index && state.updated ) {
 
                   // Fetch saved and current position of dropped element
-                  var end, start;
-                  start = ui.item.sortable.index;
+                  var end, start, original;
+                  start = state.index;
                   end = ui.item.index();
 
-                  // Reorder array and apply change to scope
-                  ui.item.sortable.resort.$modelValue.splice(end, 0, ui.item.sortable.resort.$modelValue.splice(start, 1)[0]);
-
+                  // Reorder array
+                  original = ngModel.$modelValue.splice(start, 1)[0];
+                  ngModel.$modelValue.splice(end, 0, original);
                 }
+
               };
 
             }
@@ -98,7 +106,7 @@ angular.module('ui.sortable', [])
                       if( callbacks[key] ){
                           // wrap the callback
                           value = combineCallbacks( callbacks[key], value );
-                          
+
                           if ( key === 'stop' ){
                               // call apply after stop
                               value = combineCallbacks( value, apply );
@@ -113,7 +121,7 @@ angular.module('ui.sortable', [])
 
                     opts[key] = combineCallbacks(value, opts[key]);
               });
-              
+
               // call apply after stop
               opts.stop = combineCallbacks( opts.stop, apply );
 

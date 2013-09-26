@@ -65,7 +65,7 @@ angular.module('ui.sortable', [])
               };
 
               callbacks.receive = function(e, ui, state) {
-                if(!state) { state = {moved: ui.item.moved, index: ui.item.index() }; }
+                if(!state || !state.moved) { state = {moved: ui.item.moved, index: ui.item.index() }; }
 
                 // added item to array into correct position and set up flag
                 ngModel.$modelValue.splice(state.index, 0, state.moved);

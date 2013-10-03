@@ -117,6 +117,12 @@ angular.module('ui.sortable', [])
                   });
               }, true);
 
+              // get the actual config before initializing sortable
+              // FIXME: this can break callbacks or no?
+              if(attrs.uiSortable) {
+                angular.extend(opts, scope.$eval(attrs.uiSortable));
+              }
+
               angular.forEach(callbacks, function(value, key ){
 
                     opts[key] = combineCallbacks(value, opts[key]);

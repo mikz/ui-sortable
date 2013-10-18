@@ -69,6 +69,7 @@ angular.module('ui.sortable', [])
 
                 // added item to array into correct position and set up flag
                 ngModel.$modelValue.splice(state.index, 0, state.moved);
+                delete state.updated;
               };
 
               callbacks.remove = function(e, ui, state) {
@@ -83,7 +84,7 @@ angular.module('ui.sortable', [])
                 sortable = null;
 
                 // digest all prepared changes
-                if( state && state.index && state.updated ) {
+                if( state && state.index && state.updated && !state.moved) {
 
                   // Fetch saved and current position of dropped element
                   var end, start, original;
